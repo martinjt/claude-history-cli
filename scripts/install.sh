@@ -172,7 +172,7 @@ configure_cli() {
 # Claude History Sync Configuration
 #
 # The CLI connects to: https://claude-history-mcp.devrel.hny.wtf
-# Authentication is handled automatically via OAuth
+# Authentication is handled via: https://auth.claude-history-mcp.devrel.hny.wtf
 
 machine_id: "$machine_id"
 claude_data_dir: "$claude_data_dir"

@@ -73,7 +73,7 @@ func DefaultConfig() *Config {
 		CognitoRegion:   "eu-west-1",
 		CognitoPoolID:   "eu-west-1_CmpHruSh7",
 		CognitoClientID: "79c7ftkao9ae7drb9qrij9q7tc",
-		CognitoDomain:   "claude-history-prod.auth.eu-west-1.amazoncognito.com",
+		CognitoDomain:   "auth.claude-history-mcp.devrel.hny.wtf",
 	}
 }
 
