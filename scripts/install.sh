@@ -204,24 +204,49 @@ authenticate() {
     print_warning "A browser window will open for you to sign in with your credentials."
     print_warning "If the browser doesn't open automatically, copy and paste the URL shown."
     echo ""
+    print_info "The CLI will:"
+    print_info "  1. Generate an OAuth authorization URL"
+    print_info "  2. Start a local callback server on port 3000"
+    print_info "  3. Wait for you to complete login in the browser"
+    print_info "  4. Exchange the authorization code for access tokens"
+    echo ""
 
     read -p "Press ENTER to continue..."
     echo ""
 
-    if ! ${BINARY_NAME} login; then
-        print_error "Authentication failed"
-        echo ""
-        print_info "Troubleshooting:"
-        print_info "  1. Check your Cognito credentials"
-        print_info "  2. Verify the Cognito configuration in: $CONFIG_FILE"
-        print_info "  3. Ensure you have an account in the Cognito User Pool"
-        echo ""
-        print_info "You can retry authentication later with:"
-        print_info "  ${BINARY_NAME} login"
+    # Use full path to ensure binary is found
+    FULL_PATH="${INSTALL_DIR}/${BINARY_NAME}"
+
+    if [ ! -x "$FULL_PATH" ]; then
+        print_error "Binary not found or not executable at: $FULL_PATH"
         return 1
     fi
 
+    print_info "Running: $FULL_PATH login"
+    echo ""
+
+    if ! "$FULL_PATH" login; then
+        print_error "Authentication failed"
+        echo ""
+        print_info "Troubleshooting:"
+        print_info "  1. Ensure you have a Cognito account in the User Pool"
+        print_info "  2. Complete the login in the browser within 5 minutes"
+        print_info "  3. Make sure port 3000 is not already in use"
+        print_info "  4. Check your Cognito configuration in: $CONFIG_FILE"
+        echo ""
+        print_warning "Don't worry! The CLI is installed and configured."
+        print_info "You can authenticate later by running:"
+        print_info "  ${BINARY_NAME} login"
+        echo ""
+        print_info "After authenticating, you can manually sync with:"
+        print_info "  ${BINARY_NAME} sync"
+        return 1
+    fi
+
+    echo ""
     print_success "Successfully authenticated!"
+    echo ""
+    print_info "You can now run '${BINARY_NAME} sync' to sync your conversations."
 }
 
 # Setup cron job
@@ -229,7 +254,14 @@ setup_cron() {
     print_header "Automatic Sync Setup"
 
     echo ""
+    print_success "Authentication successful! Ready for automatic syncing."
+    echo ""
     print_info "You can set up automatic syncing to run every 5 minutes."
+    print_info "The cron job will call '${BINARY_NAME} sync' which:"
+    print_info "  - Scans your Claude conversation directory"
+    print_info "  - Uploads new messages to the MCP server"
+    print_info "  - Uses your stored authentication tokens"
+    echo ""
     print_warning "This will add a cron job to your crontab."
     echo ""
 
@@ -238,7 +270,9 @@ setup_cron() {
 
     if [[ $REPLY =~ ^[Nn]$ ]]; then
         print_info "Skipping automatic sync setup"
-        print_info "You can manually sync with: ${BINARY_NAME} sync"
+        echo ""
+        print_info "You can manually sync anytime with:"
+        print_info "  ${BINARY_NAME} sync"
         return
     fi
 
@@ -250,8 +284,12 @@ setup_cron() {
         print_warning "Cron job already exists"
     else
         (crontab -l 2>/dev/null; echo "$CRON_LINE") | crontab -
+        echo ""
         print_success "Automatic sync configured (every 5 minutes)"
         print_info "Logs will be written to: ${CONFIG_DIR}/sync.log"
+        echo ""
+        print_info "To view sync logs:"
+        print_info "  tail -f ${CONFIG_DIR}/sync.log"
     fi
 }
 
@@ -295,11 +333,26 @@ main() {
     install_binary
     configure_cli
 
+    # Always attempt authentication during installation
+    # This ensures users are ready to sync immediately
     if authenticate; then
         setup_cron
     else
-        print_warning "Skipping cron setup due to authentication failure"
-        print_info "Run '${BINARY_NAME} login' after fixing authentication issues"
+        echo ""
+        print_header "Installation Complete (Auth Pending)"
+        echo ""
+        print_warning "Installation finished but authentication was not completed."
+        print_info "The CLI is installed and configured, but you need to authenticate"
+        print_info "before you can sync conversations."
+        echo ""
+        print_info "To authenticate, run:"
+        print_info "  ${BINARY_NAME} login"
+        echo ""
+        print_info "After authenticating, you can:"
+        print_info "  - Manually sync: ${BINARY_NAME} sync"
+        print_info "  - Setup cron: Run this installer again or manually add cron job"
+        echo ""
+        return 0
     fi
 
     show_completion
