@@ -7,13 +7,17 @@ import (
 	"os"
 )
 
+type MessageContent struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+	Model   string `json:"model,omitempty"`
+}
+
 type Message struct {
-	UUID      string `json:"uuid"`
-	Timestamp string `json:"timestamp"`
-	Role      string `json:"role"`
-	Content   string `json:"content"`
-	Model     string `json:"model,omitempty"`
-	Tokens    int    `json:"tokens,omitempty"`
+	UUID      string         `json:"uuid"`
+	Timestamp string         `json:"timestamp"`
+	Message   MessageContent `json:"message"`
+	Type      string         `json:"type,omitempty"`
 }
 
 type Delta struct {
@@ -32,9 +36,9 @@ func CalculateDelta(file FileInfo, lastSyncedUUID string) (*Delta, error) {
 
 	var allMessages []Message
 	scanner := bufio.NewScanner(f)
-	// Increase buffer size for large messages (up to 1MB per line)
-	buf := make([]byte, 0, 1024*1024)
-	scanner.Buffer(buf, 1024*1024)
+	// Increase buffer size for large messages (up to 10MB per line for images/tool results)
+	buf := make([]byte, 0, 10*1024*1024)
+	scanner.Buffer(buf, 10*1024*1024)
 
 	for scanner.Scan() {
 		line := scanner.Bytes()
@@ -48,7 +52,7 @@ func CalculateDelta(file FileInfo, lastSyncedUUID string) (*Delta, error) {
 			continue
 		}
 
-		if msg.UUID == "" || msg.Role == "" {
+		if msg.UUID == "" || msg.Message.Role == "" {
 			continue
 		}
 
