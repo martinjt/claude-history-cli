@@ -195,9 +195,53 @@ EOF
     print_success "Configuration saved to: $CONFIG_FILE"
 }
 
+# Check if already authenticated
+check_auth() {
+    local full_path="${INSTALL_DIR}/${BINARY_NAME}"
+
+    if [ ! -x "$full_path" ]; then
+        return 1
+    fi
+
+    # Check status, looking for "authenticated" in the output
+    if "$full_path" status 2>/dev/null | grep -q "Status: authenticated"; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Authenticate with Cognito
 authenticate() {
     print_header "Authentication"
+
+    # Use full path to ensure binary is found
+    FULL_PATH="${INSTALL_DIR}/${BINARY_NAME}"
+
+    if [ ! -x "$FULL_PATH" ]; then
+        print_error "Binary not found or not executable at: $FULL_PATH"
+        return 1
+    fi
+
+    # Check if already authenticated
+    if check_auth; then
+        print_success "Already authenticated!"
+        echo ""
+        print_info "Current authentication status:"
+        "$FULL_PATH" status | grep -A 1 "Auth:"
+        echo ""
+
+        read -p "Re-authenticate anyway? (y/N) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            print_info "Keeping existing authentication"
+            return 0
+        fi
+        echo ""
+        print_info "Logging out current session..."
+        "$FULL_PATH" logout 2>/dev/null || true
+        echo ""
+    fi
 
     print_info "Starting OAuth authentication flow..."
     echo ""
@@ -213,14 +257,6 @@ authenticate() {
 
     read -p "Press ENTER to continue..."
     echo ""
-
-    # Use full path to ensure binary is found
-    FULL_PATH="${INSTALL_DIR}/${BINARY_NAME}"
-
-    if [ ! -x "$FULL_PATH" ]; then
-        print_error "Binary not found or not executable at: $FULL_PATH"
-        return 1
-    fi
 
     print_info "Running: $FULL_PATH login"
     echo ""
@@ -333,11 +369,14 @@ main() {
     install_binary
     configure_cli
 
-    # Always attempt authentication during installation
+    # Check authentication status and authenticate if needed
     # This ensures users are ready to sync immediately
     if authenticate; then
+        # Authentication successful or already authenticated
         setup_cron
+        show_completion
     else
+        # Authentication failed
         echo ""
         print_header "Installation Complete (Auth Pending)"
         echo ""
@@ -352,10 +391,14 @@ main() {
         print_info "  - Manually sync: ${BINARY_NAME} sync"
         print_info "  - Setup cron: Run this installer again or manually add cron job"
         echo ""
-        return 0
-    fi
 
-    show_completion
+        # Still show partial completion info
+        echo ""
+        print_info "Installation Summary:"
+        print_info "  Binary: ${INSTALL_DIR}/${BINARY_NAME}"
+        print_info "  Config: $CONFIG_FILE"
+        echo ""
+    fi
 }
 
 # Run main installation
