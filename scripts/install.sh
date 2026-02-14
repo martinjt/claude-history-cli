@@ -132,67 +132,60 @@ configure_cli() {
     chmod 700 "$CONFIG_DIR"
 
     if [ -f "$CONFIG_FILE" ]; then
-        print_warning "Configuration file already exists at: $CONFIG_FILE"
-        read -p "Overwrite existing configuration? (y/N) " -n 1 -r </dev/tty
+        print_success "Configuration already exists at: $CONFIG_FILE"
+        echo ""
+        read -p "Reconfigure? (y/N) " -n 1 -r </dev/tty
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             print_info "Keeping existing configuration"
             return
         fi
+        echo ""
     fi
 
-    # Get configuration values
+    # Only ask for Claude data directory - everything else is handled by defaults
     echo ""
-    print_info "Please provide the following configuration:"
-    echo ""
-
-    # API Endpoint
-    read -p "  API Endpoint [https://claude-history-mcp.devrel.hny.wtf]: " api_endpoint </dev/tty
-    api_endpoint=${api_endpoint:-https://claude-history-mcp.devrel.hny.wtf}
-
-    # Machine ID (default to hostname)
-    machine_id=$(hostname)
-    read -p "  Machine ID [$machine_id]: " custom_machine_id </dev/tty
-    machine_id=${custom_machine_id:-$machine_id}
-
-    # Claude data directory
+    print_info "Where are your Claude conversation files stored?"
     default_claude_dir="${HOME}/.claude/projects"
+    echo ""
     read -p "  Claude data directory [$default_claude_dir]: " claude_data_dir </dev/tty
     claude_data_dir=${claude_data_dir:-$default_claude_dir}
 
-    # Cognito settings
-    echo ""
-    print_info "Cognito authentication settings:"
-    read -p "  Cognito Region [eu-west-1]: " cognito_region </dev/tty
-    cognito_region=${cognito_region:-eu-west-1}
+    # Validate directory exists
+    if [ ! -d "$claude_data_dir" ]; then
+        echo ""
+        print_warning "Directory does not exist: $claude_data_dir"
+        read -p "Create it? (Y/n) " -n 1 -r </dev/tty
+        echo
+        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            mkdir -p "$claude_data_dir"
+            print_success "Created directory: $claude_data_dir"
+        fi
+    fi
 
-    read -p "  Cognito User Pool ID [eu-west-1_CmpHruSh7]: " cognito_pool_id </dev/tty
-    cognito_pool_id=${cognito_pool_id:-eu-west-1_CmpHruSh7}
+    # Get machine ID (automatic)
+    machine_id=$(hostname)
 
-    read -p "  Cognito Client ID [79c7ftkao9ae7drb9qrij9q7tc]: " cognito_client_id </dev/tty
-    cognito_client_id=${cognito_client_id:-79c7ftkao9ae7drb9qrij9q7tc}
-
-    read -p "  Cognito Domain [claude-history-prod.auth.eu-west-1.amazoncognito.com]: " cognito_domain </dev/tty
-    cognito_domain=${cognito_domain:-claude-history-prod.auth.eu-west-1.amazoncognito.com}
-
-    # Write configuration
+    # Write minimal configuration
+    # API endpoint and Cognito settings are hardcoded in the CLI defaults
     cat > "$CONFIG_FILE" << EOF
 # Claude History Sync Configuration
-api_endpoint: "$api_endpoint"
+#
+# The CLI connects to: https://claude-history-mcp.devrel.hny.wtf
+# Authentication is handled automatically via OAuth
+
 machine_id: "$machine_id"
 claude_data_dir: "$claude_data_dir"
 exclude_patterns: []
 sync_interval_minutes: 5
-
-# Cognito authentication settings
-cognito_region: "$cognito_region"
-cognito_pool_id: "$cognito_pool_id"
-cognito_client_id: "$cognito_client_id"
-cognito_domain: "$cognito_domain"
 EOF
 
     chmod 600 "$CONFIG_FILE"
-    print_success "Configuration saved to: $CONFIG_FILE"
+    echo ""
+    print_success "Configuration saved!"
+    echo ""
+    print_info "Your conversations from: $claude_data_dir"
+    print_info "Will be synced as machine: $machine_id"
 }
 
 # Check if already authenticated
@@ -265,10 +258,9 @@ authenticate() {
         print_error "Authentication failed"
         echo ""
         print_info "Troubleshooting:"
-        print_info "  1. Ensure you have a Cognito account in the User Pool"
-        print_info "  2. Complete the login in the browser within 5 minutes"
-        print_info "  3. Make sure port 3000 is not already in use"
-        print_info "  4. Check your Cognito configuration in: $CONFIG_FILE"
+        print_info "  1. Complete the login in the browser within 5 minutes"
+        print_info "  2. Make sure port 3000 is not already in use"
+        print_info "  3. If your browser didn't open, copy and paste the URL shown above"
         echo ""
         print_warning "Don't worry! The CLI is installed and configured."
         print_info "You can authenticate later by running:"

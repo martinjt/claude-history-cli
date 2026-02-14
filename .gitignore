@@ -1,0 +1,36 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+claude-history-sync
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Dependency directories (remove if needed)
+vendor/
+
+# Build artifacts
+dist/
+*.tar.gz
+*.zip
+
+# Local test files
+test_auth_flow.sh
+
+# Config files (for testing)
+*.yaml
+*.json
+!.goreleaser.yml
+
+# OS specific
+.DS_Store
+Thumbs.db

@@ -64,12 +64,16 @@ func LoadFrom(path string) (*Config, error) {
 func DefaultConfig() *Config {
 	hostname, _ := os.Hostname()
 	return &Config{
-		APIEndpoint:     "https://api.claude-history.example.com",
+		APIEndpoint:     "https://claude-history-mcp.devrel.hny.wtf",
 		MachineID:       hostname,
 		ClaudeDataDir:   DefaultClaudeDataDir(),
 		ExcludePatterns: []string{},
 		SyncInterval:    5,
+		// Production Cognito configuration - hardcoded for SaaS
 		CognitoRegion:   "eu-west-1",
+		CognitoPoolID:   "eu-west-1_CmpHruSh7",
+		CognitoClientID: "79c7ftkao9ae7drb9qrij9q7tc",
+		CognitoDomain:   "claude-history-prod.auth.eu-west-1.amazoncognito.com",
 	}
 }
 
