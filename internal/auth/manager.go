@@ -6,16 +6,16 @@ import (
 )
 
 type Manager struct {
-	config   *Config
-	pkceFlow *PKCEFlow
-	keychain *KeychainStore
+	config     *Config
+	pkceFlow   *PKCEFlow
+	tokenStore TokenStore
 }
 
 func NewManager(config *Config) *Manager {
 	return &Manager{
-		config:   config,
-		pkceFlow: NewPKCEFlow(config),
-		keychain: NewKeychainStore(),
+		config:     config,
+		pkceFlow:   NewPKCEFlow(config),
+		tokenStore: NewTokenStore(), // Auto-detects tokenStore availability
 	}
 }
 
@@ -27,7 +27,7 @@ func (m *Manager) Login(ctx context.Context) error {
 		return fmt.Errorf("authentication failed: %w", err)
 	}
 
-	if err := m.keychain.SaveTokens(tokenResp.AccessToken, tokenResp); err != nil {
+	if err := m.tokenStore.SaveTokens(tokenResp.AccessToken, tokenResp); err != nil {
 		return fmt.Errorf("saving tokens: %w", err)
 	}
 
@@ -37,15 +37,15 @@ func (m *Manager) Login(ctx context.Context) error {
 
 // GetValidToken returns a valid access token, refreshing if necessary.
 func (m *Manager) GetValidToken(ctx context.Context) (string, error) {
-	if !m.keychain.IsTokenExpired() {
-		token, err := m.keychain.GetAccessToken()
+	if !m.tokenStore.IsTokenExpired() {
+		token, err := m.tokenStore.GetAccessToken()
 		if err == nil {
 			return token, nil
 		}
 	}
 
 	// Try refresh
-	refreshToken, err := m.keychain.GetRefreshToken()
+	refreshToken, err := m.tokenStore.GetRefreshToken()
 	if err != nil {
 		return "", fmt.Errorf("no valid token or refresh token available, please login again: %w", err)
 	}
@@ -56,7 +56,7 @@ func (m *Manager) GetValidToken(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("token refresh failed, please login again: %w", err)
 	}
 
-	if err := m.keychain.SaveTokens(tokenResp.AccessToken, tokenResp); err != nil {
+	if err := m.tokenStore.SaveTokens(tokenResp.AccessToken, tokenResp); err != nil {
 		return "", fmt.Errorf("saving refreshed tokens: %w", err)
 	}
 
@@ -65,14 +65,14 @@ func (m *Manager) GetValidToken(ctx context.Context) (string, error) {
 
 // Logout clears stored tokens.
 func (m *Manager) Logout() error {
-	return m.keychain.Clear()
+	return m.tokenStore.Clear()
 }
 
 // IsAuthenticated checks if there are stored, non-expired tokens.
 func (m *Manager) IsAuthenticated() bool {
-	_, err := m.keychain.GetAccessToken()
+	_, err := m.tokenStore.GetAccessToken()
 	if err != nil {
 		return false
 	}
-	return !m.keychain.IsTokenExpired()
+	return !m.tokenStore.IsTokenExpired()
 }
