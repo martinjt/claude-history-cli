@@ -3,50 +3,35 @@ package auth
 import (
 	"context"
 	"fmt"
-	"time"
 )
 
 type Manager struct {
-	config     *Config
-	deviceFlow *DeviceFlow
-	keychain   *KeychainStore
+	config   *Config
+	pkceFlow *PKCEFlow
+	keychain *KeychainStore
 }
 
 func NewManager(config *Config) *Manager {
 	return &Manager{
-		config:     config,
-		deviceFlow: NewDeviceFlow(config),
-		keychain:   NewKeychainStore(),
+		config:   config,
+		pkceFlow: NewPKCEFlow(config),
+		keychain: NewKeychainStore(),
 	}
 }
 
-// Login performs the OAuth device flow login.
-// It returns the verification URI and user code for display,
-// then blocks until the user authorizes or context is cancelled.
+// Login performs the OAuth PKCE flow login.
+// It opens a browser for user authorization and starts a local callback server.
 func (m *Manager) Login(ctx context.Context) error {
-	deviceResp, err := m.deviceFlow.RequestDeviceCode(ctx)
+	tokenResp, err := m.pkceFlow.StartAuthFlow(ctx)
 	if err != nil {
-		return fmt.Errorf("requesting device code: %w", err)
-	}
-
-	fmt.Println("\nTo sign in, open the following URL in your browser:")
-	fmt.Printf("\n  %s\n\n", deviceResp.VerificationURIComplete)
-	fmt.Printf("Or go to %s and enter code: %s\n\n", deviceResp.VerificationURI, deviceResp.UserCode)
-	fmt.Println("Waiting for authorization...")
-
-	pollCtx, cancel := context.WithTimeout(ctx, time.Duration(deviceResp.ExpiresIn)*time.Second)
-	defer cancel()
-
-	tokenResp, err := m.deviceFlow.PollForToken(pollCtx, deviceResp.DeviceCode, deviceResp.Interval)
-	if err != nil {
-		return fmt.Errorf("waiting for authorization: %w", err)
+		return fmt.Errorf("authentication failed: %w", err)
 	}
 
 	if err := m.keychain.SaveTokens(tokenResp.AccessToken, tokenResp); err != nil {
 		return fmt.Errorf("saving tokens: %w", err)
 	}
 
-	fmt.Println("Successfully authenticated!")
+	fmt.Println("\n✅ Successfully authenticated!")
 	return nil
 }
 
@@ -65,7 +50,7 @@ func (m *Manager) GetValidToken(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("no valid token or refresh token available, please login again: %w", err)
 	}
 
-	tokenResp, err := m.deviceFlow.RefreshToken(ctx, refreshToken)
+	tokenResp, err := m.pkceFlow.RefreshToken(ctx, refreshToken)
 	if err != nil {
 		// Refresh failed, need to re-login
 		return "", fmt.Errorf("token refresh failed, please login again: %w", err)
