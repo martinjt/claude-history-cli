@@ -133,7 +133,7 @@ configure_cli() {
 
     if [ -f "$CONFIG_FILE" ]; then
         print_warning "Configuration file already exists at: $CONFIG_FILE"
-        read -p "Overwrite existing configuration? (y/N) " -n 1 -r
+        read -p "Overwrite existing configuration? (y/N) " -n 1 -r </dev/tty
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             print_info "Keeping existing configuration"
@@ -147,32 +147,32 @@ configure_cli() {
     echo ""
 
     # API Endpoint
-    read -p "  API Endpoint [https://claude-history-mcp.devrel.hny.wtf]: " api_endpoint
+    read -p "  API Endpoint [https://claude-history-mcp.devrel.hny.wtf]: " api_endpoint </dev/tty
     api_endpoint=${api_endpoint:-https://claude-history-mcp.devrel.hny.wtf}
 
     # Machine ID (default to hostname)
     machine_id=$(hostname)
-    read -p "  Machine ID [$machine_id]: " custom_machine_id
+    read -p "  Machine ID [$machine_id]: " custom_machine_id </dev/tty
     machine_id=${custom_machine_id:-$machine_id}
 
     # Claude data directory
     default_claude_dir="${HOME}/.claude/projects"
-    read -p "  Claude data directory [$default_claude_dir]: " claude_data_dir
+    read -p "  Claude data directory [$default_claude_dir]: " claude_data_dir </dev/tty
     claude_data_dir=${claude_data_dir:-$default_claude_dir}
 
     # Cognito settings
     echo ""
     print_info "Cognito authentication settings:"
-    read -p "  Cognito Region [eu-west-1]: " cognito_region
+    read -p "  Cognito Region [eu-west-1]: " cognito_region </dev/tty
     cognito_region=${cognito_region:-eu-west-1}
 
-    read -p "  Cognito User Pool ID [eu-west-1_CmpHruSh7]: " cognito_pool_id
+    read -p "  Cognito User Pool ID [eu-west-1_CmpHruSh7]: " cognito_pool_id </dev/tty
     cognito_pool_id=${cognito_pool_id:-eu-west-1_CmpHruSh7}
 
-    read -p "  Cognito Client ID [79c7ftkao9ae7drb9qrij9q7tc]: " cognito_client_id
+    read -p "  Cognito Client ID [79c7ftkao9ae7drb9qrij9q7tc]: " cognito_client_id </dev/tty
     cognito_client_id=${cognito_client_id:-79c7ftkao9ae7drb9qrij9q7tc}
 
-    read -p "  Cognito Domain [claude-history-prod.auth.eu-west-1.amazoncognito.com]: " cognito_domain
+    read -p "  Cognito Domain [claude-history-prod.auth.eu-west-1.amazoncognito.com]: " cognito_domain </dev/tty
     cognito_domain=${cognito_domain:-claude-history-prod.auth.eu-west-1.amazoncognito.com}
 
     # Write configuration
@@ -231,7 +231,7 @@ authenticate() {
         "$FULL_PATH" status | grep -A 1 "Auth:"
         echo ""
 
-        read -p "Re-authenticate anyway? (y/N) " -n 1 -r
+        read -p "Re-authenticate anyway? (y/N) " -n 1 -r </dev/tty
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             print_info "Keeping existing authentication"
@@ -255,7 +255,7 @@ authenticate() {
     print_info "  4. Exchange the authorization code for access tokens"
     echo ""
 
-    read -p "Press ENTER to continue..."
+    read -p "Press ENTER to continue..." </dev/tty
     echo ""
 
     print_info "Running: $FULL_PATH login"
@@ -301,7 +301,7 @@ setup_cron() {
     print_warning "This will add a cron job to your crontab."
     echo ""
 
-    read -p "Setup automatic sync? (Y/n) " -n 1 -r
+    read -p "Setup automatic sync? (Y/n) " -n 1 -r </dev/tty
     echo
 
     if [[ $REPLY =~ ^[Nn]$ ]]; then
