@@ -2,6 +2,10 @@ version: 2
 
 project_name: claude-history-sync
 
+before:
+  hooks:
+    - go mod tidy
+
 builds:
   - id: claude-history-sync
     main: ./cmd/claude-history-sync

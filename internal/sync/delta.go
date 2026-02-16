@@ -7,17 +7,66 @@ import (
 	"os"
 )
 
-type MessageContent struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-	Model   string `json:"model,omitempty"`
+type Message struct {
+	UUID      string `json:"uuid"`
+	Timestamp string `json:"timestamp"`
+	Role      string `json:"role"`
+	Content   string `json:"content"`
+	Model     string `json:"model,omitempty"`
+	Type      string `json:"type,omitempty"`
 }
 
-type Message struct {
-	UUID      string         `json:"uuid"`
-	Timestamp string         `json:"timestamp"`
-	Message   MessageContent `json:"message"`
-	Type      string         `json:"type,omitempty"`
+// ClaudeCodeMessage represents the actual format from Claude Code conversation files
+type ClaudeCodeMessage struct {
+	UUID      string                 `json:"uuid"`
+	Timestamp string                 `json:"timestamp"`
+	Type      string                 `json:"type"`
+	Message   map[string]interface{} `json:"message"`
+}
+
+// ToMessage converts ClaudeCodeMessage to our simplified Message format
+func (ccm *ClaudeCodeMessage) ToMessage() *Message {
+	if ccm.UUID == "" || ccm.Message == nil {
+		return nil
+	}
+
+	msg := &Message{
+		UUID:      ccm.UUID,
+		Timestamp: ccm.Timestamp,
+		Type:      ccm.Type,
+	}
+
+	// Extract role
+	if role, ok := ccm.Message["role"].(string); ok {
+		msg.Role = role
+	}
+
+	// Extract content (can be string or array)
+	if content, ok := ccm.Message["content"].(string); ok {
+		msg.Content = content
+	} else if contentArray, ok := ccm.Message["content"].([]interface{}); ok {
+		// For assistant messages with structured content, extract text parts
+		var textParts []string
+		for _, item := range contentArray {
+			if itemMap, ok := item.(map[string]interface{}); ok {
+				if itemType, ok := itemMap["type"].(string); ok && itemType == "text" {
+					if text, ok := itemMap["text"].(string); ok {
+						textParts = append(textParts, text)
+					}
+				}
+			}
+		}
+		if len(textParts) > 0 {
+			msg.Content = textParts[0] // Use first text part
+		}
+	}
+
+	// Extract model
+	if model, ok := ccm.Message["model"].(string); ok {
+		msg.Model = model
+	}
+
+	return msg
 }
 
 type Delta struct {
@@ -46,13 +95,23 @@ func CalculateDelta(file FileInfo, lastSyncedUUID string) (*Delta, error) {
 			continue
 		}
 
+		// Try parsing as Claude Code format first
+		var ccMsg ClaudeCodeMessage
+		if err := json.Unmarshal(line, &ccMsg); err == nil {
+			if msg := ccMsg.ToMessage(); msg != nil && msg.UUID != "" && msg.Role != "" {
+				allMessages = append(allMessages, *msg)
+				continue
+			}
+		}
+
+		// Fall back to legacy format for backwards compatibility
 		var msg Message
 		if err := json.Unmarshal(line, &msg); err != nil {
 			// Skip malformed lines
 			continue
 		}
 
-		if msg.UUID == "" || msg.Message.Role == "" {
+		if msg.UUID == "" || msg.Role == "" {
 			continue
 		}
 

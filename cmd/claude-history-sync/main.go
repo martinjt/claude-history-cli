@@ -120,9 +120,9 @@ func runSync() error {
 			apiMessages[i] = api.Message{
 				UUID:      m.UUID,
 				Timestamp: m.Timestamp,
-				Role:      m.Message.Role,
-				Content:   m.Message.Content,
-				Model:     m.Message.Model,
+				Role:      m.Role,
+				Content:   m.Content,
+				Model:     m.Model,
 				Tokens:    0, // Not available in conversation format
 			}
 		}

@@ -10,9 +10,9 @@ func TestCalculateDelta_AllNew(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test-session.jsonl")
 
-	content := `{"uuid":"msg-1","timestamp":"2024-01-01T00:00:00Z","role":"user","content":"Hello"}
-{"uuid":"msg-2","timestamp":"2024-01-01T00:01:00Z","role":"assistant","content":"Hi there"}
-{"uuid":"msg-3","timestamp":"2024-01-01T00:02:00Z","role":"user","content":"Thanks"}
+	content := `{"uuid":"msg-1","timestamp":"2024-01-01T00:00:00Z","role":"user","content":"Hello","model":null,"tokens":null}
+{"uuid":"msg-2","timestamp":"2024-01-01T00:01:00Z","role":"assistant","content":"Hi there","model":"claude-sonnet-4-5-20250929","tokens":42}
+{"uuid":"msg-3","timestamp":"2024-01-01T00:02:00Z","role":"user","content":"Thanks","model":null,"tokens":null}
 `
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		t.Fatalf("writing test file: %v", err)
@@ -46,9 +46,9 @@ func TestCalculateDelta_Incremental(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test-session.jsonl")
 
-	content := `{"uuid":"msg-1","timestamp":"2024-01-01T00:00:00Z","role":"user","content":"Hello"}
-{"uuid":"msg-2","timestamp":"2024-01-01T00:01:00Z","role":"assistant","content":"Hi there"}
-{"uuid":"msg-3","timestamp":"2024-01-01T00:02:00Z","role":"user","content":"Thanks"}
+	content := `{"uuid":"msg-1","timestamp":"2024-01-01T00:00:00Z","role":"user","content":"Hello","model":null,"tokens":null}
+{"uuid":"msg-2","timestamp":"2024-01-01T00:01:00Z","role":"assistant","content":"Hi there","model":"claude-sonnet-4-5-20250929","tokens":42}
+{"uuid":"msg-3","timestamp":"2024-01-01T00:02:00Z","role":"user","content":"Thanks","model":null,"tokens":null}
 `
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		t.Fatalf("writing test file: %v", err)
@@ -82,7 +82,7 @@ func TestCalculateDelta_NoNew(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test-session.jsonl")
 
-	content := `{"uuid":"msg-1","timestamp":"2024-01-01T00:00:00Z","role":"user","content":"Hello"}
+	content := `{"uuid":"msg-1","timestamp":"2024-01-01T00:00:00Z","role":"user","content":"Hello","model":null,"tokens":null}
 `
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		t.Fatalf("writing test file: %v", err)
@@ -108,9 +108,9 @@ func TestCalculateDelta_SkipsMalformed(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test-session.jsonl")
 
-	content := `{"uuid":"msg-1","timestamp":"2024-01-01T00:00:00Z","role":"user","content":"Hello"}
+	content := `{"uuid":"msg-1","timestamp":"2024-01-01T00:00:00Z","role":"user","content":"Hello","model":null,"tokens":null}
 this is not valid json
-{"uuid":"msg-2","timestamp":"2024-01-01T00:01:00Z","role":"assistant","content":"Hi"}
+{"uuid":"msg-2","timestamp":"2024-01-01T00:01:00Z","role":"assistant","content":"Hi","model":"claude-sonnet-4-5-20250929","tokens":10}
 `
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		t.Fatalf("writing test file: %v", err)
@@ -138,9 +138,9 @@ this is not valid json
 
 func TestExtractNewMessages(t *testing.T) {
 	messages := []Message{
-		{UUID: "a", Role: "user"},
-		{UUID: "b", Role: "assistant"},
-		{UUID: "c", Role: "user"},
+		{UUID: "a", Role: "user", Content: "Hello"},
+		{UUID: "b", Role: "assistant", Content: "Hi"},
+		{UUID: "c", Role: "user", Content: "Thanks"},
 	}
 
 	tests := []struct {
