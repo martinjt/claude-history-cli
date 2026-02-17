@@ -34,6 +34,17 @@ type SyncResponse struct {
 	SessionID string `json:"sessionId"`
 }
 
+type Conversation struct {
+	SessionID string `json:"sessionId"`
+	Hash      string `json:"hash"`
+	Date      string `json:"date"`
+}
+
+type ConversationsListResponse struct {
+	Conversations []Conversation `json:"conversations"`
+	Total         int            `json:"total"`
+}
+
 type Client struct {
 	endpoint   string
 	machineID  string
@@ -60,6 +71,16 @@ func (c *Client) Sync(ctx context.Context, req *SyncRequest) (*SyncResponse, err
 
 	var resp *SyncResponse
 	err = c.doWithRetry(ctx, "POST", "/sync", body, &resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func (c *Client) GetConversations(ctx context.Context) (*ConversationsListResponse, error) {
+	var resp *ConversationsListResponse
+	err := c.doWithRetry(ctx, "GET", "/conversations", nil, &resp)
 	if err != nil {
 		return nil, err
 	}

@@ -98,10 +98,42 @@ func runSync() error {
 	}
 	fmt.Printf("Found %d conversation files\n", len(files))
 
+	// Fetch existing conversations with hashes from server
+	fmt.Println("Fetching conversation list from server...")
+	conversationsList, err := apiClient.GetConversations(ctx)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to fetch conversations list: %v\n", err)
+		fmt.Println("Continuing with UUID-based sync (may re-process unchanged conversations)")
+		conversationsList = &api.ConversationsListResponse{Conversations: []api.Conversation{}}
+	} else {
+		fmt.Printf("Server has %d conversations\n", conversationsList.Total)
+	}
+
+	// Build hash map for quick lookup
+	remoteHashes := make(map[string]string)
+	for _, conv := range conversationsList.Conversations {
+		remoteHashes[conv.SessionID] = conv.Hash
+	}
+
 	// Calculate and sync deltas
 	synced := 0
+	skipped := 0
 	errors := 0
 	for _, file := range files {
+		// Calculate local hash
+		localHash, err := sync.CalculateFileHash(file)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: error calculating hash for %s: %v\n", file.Path, err)
+			errors++
+			continue
+		}
+
+		// Check if conversation needs sync based on hash comparison
+		remoteHash := remoteHashes[file.SessionID]
+		if !sync.ConversationNeedsSync(localHash, remoteHash) {
+			skipped++
+			continue // Skip unchanged conversations
+		}
 		lastUUID := state.GetLastSyncedUUID(file.SessionID)
 		delta, err := sync.CalculateDelta(file, lastUUID)
 		if err != nil {
@@ -153,7 +185,7 @@ func runSync() error {
 		return fmt.Errorf("saving sync state: %w", err)
 	}
 
-	fmt.Printf("\nSync complete: %d sessions synced", synced)
+	fmt.Printf("\nSync complete: %d sessions synced, %d skipped (unchanged)", synced, skipped)
 	if errors > 0 {
 		fmt.Printf(", %d errors", errors)
 	}

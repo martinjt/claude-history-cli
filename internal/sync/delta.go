@@ -14,6 +14,7 @@ type Message struct {
 	Content   string `json:"content"`
 	Model     string `json:"model,omitempty"`
 	Type      string `json:"type,omitempty"`
+	Tokens    int    `json:"tokens,omitempty"`
 }
 
 // ClaudeCodeMessage represents the actual format from Claude Code conversation files
