@@ -52,11 +52,13 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println(`Usage: claude-history-sync <command>
+	fmt.Println(`Usage: claude-history-sync <command> [flags]
 
 Commands:
   sync      Sync Claude conversation history
   login     Authenticate with OAuth
+            Flags:
+              --force    Force re-authentication even if already authenticated
   logout    Clear stored credentials
   status    Show sync and auth status
   version   Print version information
@@ -203,10 +205,19 @@ func runLogin() error {
 		return fmt.Errorf("loading config: %w", err)
 	}
 
+	// Check for --force flag
+	force := false
+	for _, arg := range os.Args[2:] {
+		if arg == "--force" || arg == "-f" {
+			force = true
+			break
+		}
+	}
+
 	authConfig := auth.NewConfig(cfg.CognitoRegion, cfg.CognitoPoolID, cfg.CognitoClientID, cfg.CognitoDomain)
 	manager := auth.NewManager(authConfig)
 
-	return manager.Login(ctx)
+	return manager.Login(ctx, force)
 }
 
 func runLogout() error {
