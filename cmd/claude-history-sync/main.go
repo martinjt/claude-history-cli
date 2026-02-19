@@ -78,8 +78,9 @@ func runSync() error {
 	authConfig := auth.NewConfig(cfg.CognitoRegion, cfg.CognitoPoolID, cfg.CognitoClientID, cfg.CognitoDomain)
 	authManager := auth.NewManager(authConfig)
 
-	if !authManager.IsAuthenticated() {
-		return fmt.Errorf("not authenticated. Run 'claude-history-sync login' first")
+	// Validate we can get a token (refreshes automatically if access token expired)
+	if _, err := authManager.GetValidToken(ctx); err != nil {
+		return fmt.Errorf("not authenticated. Run 'claude-history-sync login' first: %w", err)
 	}
 
 	// Setup API client
@@ -253,10 +254,11 @@ func runStatus() {
 	manager := auth.NewManager(authConfig)
 
 	fmt.Printf("\nAuth:\n")
-	if manager.IsAuthenticated() {
+	ctx := context.Background()
+	if _, err := manager.GetValidToken(ctx); err == nil {
 		fmt.Printf("  Status: authenticated\n")
 	} else {
-		fmt.Printf("  Status: not authenticated\n")
+		fmt.Printf("  Status: not authenticated (%v)\n", err)
 	}
 
 	state, err := sync.LoadState(sync.DefaultStatePath())
