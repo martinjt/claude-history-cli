@@ -87,6 +87,12 @@ func (m *Manager) GetValidToken(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("token refresh failed, please login again: %w", err)
 	}
 
+	// Cognito refresh grant doesn't return a new refresh token,
+	// so preserve the existing one
+	if tokenResp.RefreshToken == "" {
+		tokenResp.RefreshToken = refreshToken
+	}
+
 	if err := m.tokenStore.SaveTokens(tokenResp.AccessToken, tokenResp); err != nil {
 		return "", fmt.Errorf("saving refreshed tokens: %w", err)
 	}
